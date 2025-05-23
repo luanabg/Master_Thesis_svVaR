@@ -24,10 +24,12 @@ length(eur_chf[is.na(eur_chf$`EURCHF=X.Close`)]$`EURCHF=X.Close`)
 eur_usd <- na.omit(Ad(eur_usd))
 eur_chf <- na.omit(Ad(eur_chf))
 
-# returns (normal not log!)
-ret_usd <- diff(eur_usd)[-1]
+# first example with 100 days in the past, 1 day is day of purchase, 102 day is day of VaR
+prices_usd <- eur_usd[1:202]
+ret_usd <- rep(prices_usd[1], 201) - prices_usd[2:202]
 
-ret_chf <- diff(eur_chf)[-1]
+prices_chf <- eur_chf[1:202]
+ret_chf <- rep(prices_chf[1], 201) - prices_chf[2:202]
 
 returns <- cbind(ret_usd, ret_chf)
 
@@ -40,13 +42,6 @@ returns_df <- data.frame(date = index(returns),
 library(MASS)
 
 set.seed(123)
-
-anyNA(returns_df$EURCHF.X.Adjusted)
-anyNA(returns_df$EURUSD.X.Adjusted)
-which(is.na(returns_df$EURUSD.X.Adjusted))
-
-# there is one NA in the USD data row number 1142
-returns_df <- returns_df[-(which(is.na(returns_df$EURUSD.X.Adjusted))),]
 
 # empirical mean
 mu <- c(mean(returns_df$EURCHF.X.Adjusted), mean(returns_df$EURUSD.X.Adjusted))
@@ -66,9 +61,7 @@ xs <- mvrnorm(n = 10000, mu = mu, Sigma = Sigma)
 
 y <- as.matrix(returns_df[,2:3])
 
-# check for completeness
-anyNA(xs)
-anyNA(y)
+# and we see that there are some points outside the thresholds
 
 ###############################
 # First attempt VaR function
@@ -101,7 +94,7 @@ VaR_scoring_single <- function(xs, y, alpha = 0.05){
   # step 3: compute sets
   yK_without_D <- which(in_yK == 1 & in_D == 0)
   D_without_yK <- which(in_yK == 0 & in_D == 1)
-
+  
   
   # step 4: compute and return scoring
   return(alpha*(1/length(xs[,1]))*length(yK_without_D) + (1-alpha)*(1/length(xs[,1]))*length(D_without_yK))
