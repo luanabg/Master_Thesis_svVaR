@@ -75,9 +75,16 @@ anyNA(y)
 ###############################
 
 # xs are 10000 drawn from pi, y is the return vector of the respective day, 
-# alpha confidence level
-VaR_scoring_single <- function(xs, y, alpha = 0.05){
-  #y <- as.matrix(y)
+# alpha confidence level, dist_type shows whether empirical or theoretical y are used
+VaR_scoring_single <- function(xs, y, alpha = 0.05, dist_type = "empirical"){
+  # preprocess y to be either empirical or theoretical
+  if (dist_type == "theoretical") {
+    # for nor mvtnorm TODO adapt possibly to new distribution
+    N <- nrow(y)
+    y <- mvrnorm(n = N, mu = mu, Sigma = Sigma)
+  } else if (dist_type != "empirical" & dist_type != "theoretical") {
+    stop("Invalid argument dist_type, can be either 'empirical' or 'theoretical'.")
+  }
   
   # step 1: check if x_i in (-y_t + K) <=> x_i >= -y_t
   # list for y_2 to y_100 indicating how many xs >= -y_t
@@ -95,6 +102,7 @@ VaR_scoring_single <- function(xs, y, alpha = 0.05){
     })
     
     prob <- length(which(not_positive == 1))/100
+    
     if (prob <= alpha) 1 else 0
   })
   
@@ -107,7 +115,7 @@ VaR_scoring_single <- function(xs, y, alpha = 0.05){
   return(alpha*(1/length(xs[,1]))*length(yK_without_D) + (1-alpha)*(1/length(xs[,1]))*length(D_without_yK))
 }
 
-VaR_scoring_multiple <- function(xs, y, window_len = 101, alpha = 0.01) {
+VaR_scoring_multiple <- function(xs, y, window_len = 101, alpha = 0.01, dist_type = "empirical") {
   # throw error in case window size cannot be reached
   if(nrow(y) <= window_len) {
     stop("Vector y needs to have more rows than window_len.")
@@ -119,30 +127,17 @@ VaR_scoring_multiple <- function(xs, y, window_len = 101, alpha = 0.01) {
   for (i in 1:(len+1)) {
     y_window <- y[i:(i+window_len-1),]
     print(i)
-    scorings[i] <- VaR_scoring_single(xs = xs, y = y_window, alpha = alpha)
+    scorings[i] <- VaR_scoring_single(xs = xs, y = y_window, alpha = alpha, dist_type = dist_type)
   }
   
   return(scorings)
 }
 
-test <- VaR_scoring_multiple(xs, y)
-test
 
+##################### RESULTS ##################### 
 
-####### TEST REMOVE LATER
+empirical_scorings <- VaR_scoring_multiple(xs, y)
 
-VaR_scoring_multiple_test <- function(xs, y, window_len = 100, alpha = 0.05) {
-  len <- nrow(y)-window_len
-  scorings <- vector(length = len)
-  
-  for (i in 1:(len+1)) {
-    y_window <- y[i:(i+window_len-1),]
-    print(y_window)
-    #scorings[i] <- VaR_scoring_single(xs = xs, y = y_window, alpha = alpha)
-  }
-  
-  #return(scorings)
-}
+theoretical_scorings <- VaR_scoring_multiple(xs, y, dist_type = "theoretical")
 
-y_test <- matrix(c(1,2,3,4,5,6,3,4,5,6,7,8), ncol = 2)
-VaR_scoring_multiple_test(0, y_test, window_len = 3)
+t.test(theoretical_scorings, test, alternative = "less", paired = TRUE)

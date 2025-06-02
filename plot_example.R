@@ -25,3 +25,17 @@ ggplot(returns_df, aes(x = EURUSD.X.Adjusted, y = EURCHF.X.Adjusted)) +
 
 
 # now we see that clearly a lot of points are outside of K!!
+
+
+
+
+# another thing
+
+library(ggplot2)
+
+ggplot(returns_df, aes(x = EURUSD.X.Adjusted, y = EURCHF.X.Adjusted)) +
+  geom_point(color = "blue", alpha = 0.6) +
+  labs(title = "EURUSD vs EURCHF Returns", 
+       x = "EURUSD Returns", 
+       y = "EURCHF Returns") +
+  theme_minimal()
