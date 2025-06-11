@@ -9,7 +9,7 @@ end <- "2025-01-01"
 getSymbols("EURUSD=X", 
            env = env, 
            from = start, 
-           to = , 
+           to = end, 
            source = "yahoo")
 getSymbols("EURCHF=X", 
            env = env, 
@@ -29,38 +29,38 @@ eur_usd <- na.omit(Ad(eur_usd))
 eur_chf <- na.omit(Ad(eur_chf))
 
 # returns (normal not log!)
-ret_usd <- diff(eur_usd)[-1]
+log_ret_usd <- diff(log(eur_usd))[-1]
 
-ret_chf <- diff(eur_chf)[-1]
+log_ret_chf <- diff(log(eur_chf))[-1]
 
-returns <- cbind(ret_usd, ret_chf)
+log_returns <- cbind(log_ret_usd, log_ret_chf)
 
 # returns of the first 101 days (100 days past data, one day to be analysed)
-returns_df <- data.frame(date = index(returns), 
-                         EURUSD = coredata(returns[,1]), 
-                         EURCHF = coredata(returns[,2]))
+log_returns_df <- data.frame(date = index(log_returns), 
+                         EURUSD = coredata(log_returns[,1]), 
+                         EURCHF = coredata(log_returns[,2]))
 
 library(MASS)
 
 set.seed(123)
 
 # only for direct use
-# anyNA(returns_df$EURCHF.X.Adjusted)
-# anyNA(returns_df$EURUSD.X.Adjusted)
-# which(is.na(returns_df$EURUSD.X.Adjusted))
+# anyNA(log_returns_df$EURCHF.X.Adjusted)
+# anyNA(log_returns_df$EURUSD.X.Adjusted)
+# which(is.na(log_returns_df$EURUSD.X.Adjusted))
 
 # there is one NA in the USD data row number 1142
-returns_df <- returns_df[-(which(is.na(returns_df$EURUSD.X.Adjusted))),]
+log_returns_df <- log_returns_df[-(which(is.na(log_returns_df$EURUSD.X.Adjusted))),]
 
 # empirical mean
-mu <- c(mean(returns_df$EURCHF.X.Adjusted), mean(returns_df$EURUSD.X.Adjusted))
+mu <- c(mean(log_returns_df$EURCHF.X.Adjusted), mean(log_returns_df$EURUSD.X.Adjusted))
 # empirical var cov matrix
-Sigma <- cov(returns_df[,2:3])
+Sigma <- cov(log_returns_df[,2:3])
 
 # draw 10000 xs from multivariate normal
 xs <- mvrnorm(n = 10000, mu = mu, Sigma = Sigma)
 
-y <- as.matrix(returns_df[,2:3])
+y <- as.matrix(log_returns_df[,2:3])
 
 # check for completeness
 is_complete <- function() {

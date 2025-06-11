@@ -83,7 +83,7 @@ VaR_scoring_single <- function(xs, y, window_len = 101, alpha = 0.05, dist_type 
 }
 
 VaR_scoring_multiple <- function(xs, y, window_len = 101, alpha = 0.01, dist_type = "empirical") {
-  start <- Sys.time()
+  start_time <- Sys.time()
   # throw error in case window size cannot be reached
   if(nrow(y) < (window_len+1)) {
     stop("Vector y needs to have more rows than window_len.")
@@ -98,7 +98,7 @@ VaR_scoring_multiple <- function(xs, y, window_len = 101, alpha = 0.01, dist_typ
     scorings[i] <- VaR_scoring_single(xs = xs, y = y_window, window_len = window_len, alpha = alpha, dist_type = dist_type)
   }
   
-  end <- Sys.time()
+  end_time <- Sys.time()
   
   return(scorings)
 }
