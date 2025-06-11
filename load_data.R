@@ -2,15 +2,19 @@
 
 library(quantmod)
 env <- new.env()
+
+start <- "2015-01-01"
+end <- "2025-01-01"
+
 getSymbols("EURUSD=X", 
            env = env, 
-           from = "2015-01-01", 
-           to = "2025-01-01", 
+           from = start, 
+           to = , 
            source = "yahoo")
 getSymbols("EURCHF=X", 
            env = env, 
-           from = "2015-01-01", 
-           to = "2025-01-01", 
+           from = start, 
+           to = end, 
            source = "yahoo")
 
 eur_usd <- env$`EURUSD=X`
