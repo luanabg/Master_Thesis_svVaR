@@ -1,4 +1,6 @@
 library(mvtnorm)
+library(copula)
+library(mistr)
 
 source("load_data.R")
 source("cdf_helpers.R")
@@ -38,21 +40,11 @@ VaR_scoring_single <- function(xs, y, window_len = 101, alpha = 0.05, dist_type 
       u <- numeric(d)
       
       for (i in 1:d) {
-        gpd_fit <- get_gpd_params(y[1:window_len,i], threshold = 0.05)
-        
-        lower_quantile <- quantile(y[1:window_len,i], 0.05)
-        upper_quantile <- quantile(y[1:window_len,i], 0.95)
+        gpd_fit <- GNG_fit(log_returns_df[,(i+1)], start = c(break1 = -0.02, break2 = 0.02, mean = 0,
+                                                         sd = 0.016, shape1 = 0.16, shape2 = 0.11))
         
         # we pass -x[i] here for P(y < -x) and again 'not positive'
-        u[i] <- univariate_hybrid_cdf(-x[i], 
-                                      mean = mean(y[1:window_len,i]), 
-                                      sd = sd(y[1:window_len,i]),
-                                      lower = lower_quantile,
-                                      upper = upper_quantile,
-                                      scale_u = gpd_fit$upper_scale,
-                                      shape_u = gpd_fit$upper_shape,
-                                      scale_l = gpd_fit$lower_scale,
-                                      shape_l = gpd_fit$lower_shape)
+        u[i] <- univariate_mixed_cdf(-x[i], gpd_fit)
       }
       
       cor_matrix <- cor(y[1:window_len, ])
@@ -83,7 +75,6 @@ VaR_scoring_single <- function(xs, y, window_len = 101, alpha = 0.05, dist_type 
 }
 
 VaR_scoring_multiple <- function(xs, y, window_len = 101, alpha = 0.01, dist_type = "empirical") {
-  start_time <- Sys.time()
   # throw error in case window size cannot be reached
   if(nrow(y) < (window_len+1)) {
     stop("Vector y needs to have more rows than window_len.")
@@ -98,7 +89,6 @@ VaR_scoring_multiple <- function(xs, y, window_len = 101, alpha = 0.01, dist_typ
     scorings[i] <- VaR_scoring_single(xs = xs, y = y_window, window_len = window_len, alpha = alpha, dist_type = dist_type)
   }
   
-  end_time <- Sys.time()
   
   return(scorings)
 }
@@ -108,24 +98,26 @@ VaR_scoring_multiple <- function(xs, y, window_len = 101, alpha = 0.01, dist_typ
 
 # use 250 days for the window using "the past year" to have enough tail 
 # observations to fit the gpd
-empirical_scorings <- VaR_scoring_multiple(xs, y, window_len = 251)
+start_time <- Sys.time()
+empirical_scorings <- VaR_scoring_multiple(xs[1:300,], y[1:500,], window_len = 251)
 
-normal_scorings <- VaR_scoring_multiple(xs, y, window_len = 251, dist_type = "normal")
+normal_scorings <- VaR_scoring_multiple(xs[1:300,], y[1:500,], window_len = 251, dist_type = "normal")
 
-gpd_normal_scorings <- VaR_scoring_multiple(xs, y, window_len = 251, dist_type = "gpd-normal")
+gpd_normal_scorings <- VaR_scoring_multiple(xs[1:300,], y[1:500,], window_len = 251, dist_type = "gpd-normal")
+end_time <- Sys.time()
 
 # here, "less" means better!
 t.test(empirical_scorings, normal_scorings, alternative = "less", paired = TRUE)
 t.test(empirical_scorings, gpd_normal_scorings, alternative = "less", paired = TRUE)
 
-matplot(returns_df$date[251:length(returns_df$date)], cbind(empirical_scorings, normal_scorings), type = "l", lty = 1, 
+matplot(log_returns_df$date[251:500], cbind(empirical_scorings, normal_scorings), type = "l", lty = 1, 
         col = c("red", "blue"), xlab = "Date", 
         ylab = "Scorings", main = "Scoring values: Empirical vs. Normal")
 legend("topright", legend = c("Empirical", "Normal"), 
        col = c("red", "blue"), 
        lty = 1)
 
-matplot(returns_df$date[101:length(returns_df$date)], cbind(empirical_scorings, gpd_normal_scorings), type = "l", lty = 1, 
+matplot(log_returns_df$date[251:500], cbind(empirical_scorings, gpd_normal_scorings), type = "l", lty = 1, 
         col = c("red", "blue"), xlab = "Date", 
         ylab = "Scorings", main = "Scoring values: Empirical vs. GPD-Normal")
 legend("topright", legend = c("Empirical", "GPD-Normal"), 
